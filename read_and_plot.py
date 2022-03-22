@@ -3,7 +3,10 @@ import os
 from matplotlib import pyplot
 import wave
 import struct
+import array
 import numpy as np
+from scipy import fftpack
+from scipy import signal
 
 def get_meta_data(wav):
     nchannels, sampwidth, framerate, nframes, comptype, compname =  wav.getparams()
@@ -18,6 +21,14 @@ def get_meta_data(wav):
             }
 
     return meta_data
+
+def find_fundamental(v, md, nbins):
+    sig_fft = fftpack.fft(v, n = nbins)
+    power = abs(sig_fft)**2
+    (peaks,amplitudes) = signal.find_peaks(power)
+    print(max(amplitudes))
+    #currently returning error because amplitudes is empty
+    return peaks
 
 standinArg="audiocheck.net_sin_500Hz_-3dBFS_3s.wav"
 
@@ -34,7 +45,9 @@ with wave.open(standinArg,'rb') as wav:
         s=struct.unpack("<h", framebytes)[0]
         samples.append(s)
 
-    pyplot.plot(samples[:n],'ro')
-    pyplot.show()
+    f = find_fundamental(samples, md, md["framerate"])
+
+    #pyplot.plot(samples[:n],'ro')
+    #pyplot.show()
 
 
