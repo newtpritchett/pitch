@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import os
-from matplotlib import pyplot
+from matplotlib import pyplot as plt
 import wave
 import struct
 import array
 import numpy as np
-from scipy import fftpack
-from scipy import signal
+from scipy.fft import fft,fftfreq
 
 def get_meta_data(wav):
     nchannels, sampwidth, framerate, nframes, comptype, compname =  wav.getparams()
@@ -21,21 +20,34 @@ def get_meta_data(wav):
             }
 
     return meta_data
+def plot_fft(fft,n):
+    (xf,yf) = fft
+    fig, ax = plt.subplots() 
+    ax.plot(xf, 2.0/n * np.abs(yf[0:n//2]))
+    ax.set_xlim(0, 1000)
+    plt.grid()
+    plt.show()
 
-def find_fundamental(v, md, nbins):
-    sig_fft = fftpack.fft(v, n = nbins)
-    power = abs(sig_fft)**2
-    (peaks,amplitudes) = signal.find_peaks(power)
-    print(max(amplitudes))
+    return
+
+def find_fundamental(v, md, n):
+    
+    xf = fftfreq(n, 1/md["framerate"])[:n//2]
+    yf = fft(v)
+    mbin = np.argmax(np.abs(yf))
+    print(mbin, xf[mbin])
     #currently returning error because amplitudes is empty
-    return peaks
+
+    return (xf, yf)
 
 standinArg="audiocheck.net_sin_500Hz_-3dBFS_3s.wav"
 
 with wave.open(standinArg,'rb') as wav:
     md=get_meta_data(wav)
-    n=md["framerate"]//500
+    n=22000 #md["framerate"]
     samples=[]
+
+    print(md)
     if(md["channels"]>1):
         print("WARNING: SOFTWARE DOES NOT CURRENTLY SUPPORT STEREO\n")
     while True:
@@ -45,7 +57,8 @@ with wave.open(standinArg,'rb') as wav:
         s=struct.unpack("<h", framebytes)[0]
         samples.append(s)
 
-    f = find_fundamental(samples, md, md["framerate"])
+    f = find_fundamental(samples[:n], md, n)
+    plot_fft(f,n)
 
     #pyplot.plot(samples[:n],'ro')
     #pyplot.show()
